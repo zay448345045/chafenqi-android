@@ -2,6 +2,7 @@ package com.nltv.chafenqi.networking
 
 import android.util.Log
 import com.nltv.chafenqi.data.ChunithmMusicStat
+import com.nltv.chafenqi.data.Comment
 import com.nltv.chafenqi.data.VersionData
 import com.nltv.chafenqi.data.leaderboard.ChunithmDiffLeaderboard
 import com.nltv.chafenqi.data.leaderboard.ChunithmFirstLeaderboardItem
@@ -35,6 +36,11 @@ import kotlinx.serialization.json.Json
 class CFQServer {
     companion object {
         var defaultPath = "http://43.139.107.206:8083"
+        fun setDefaultServerPath(path: String) {
+            defaultPath = path
+        }
+
+        val decoder = Json { ignoreUnknownKeys = true }
 
         val client = HttpClient(OkHttp) {
             install(ContentNegotiation) {
@@ -209,6 +215,44 @@ class CFQServer {
                 response.bodyAsText()
             } catch (e: Exception) {
                 ""
+            }
+        }
+
+        suspend fun apiAddFavMusic(token: String, gameType: Int, musicId: String): String? {
+            Log.i("CFQServer", "Adding game $gameType music $musicId to favorites.")
+            return try {
+                val response = fetchFromServer(
+                    method = "POST",
+                    "api/user/favorite/add",
+                    token = token,
+                    payload = hashMapOf(
+                        "game" to gameType.toString(),
+                        "musicId" to musicId
+                    )
+                )
+                response.bodyAsText()
+            } catch (e: Exception) {
+                Log.e("CFQServer", "Failed to add game $gameType music $musicId to favorites: ${e.localizedMessage}")
+                null
+            }
+        }
+
+        suspend fun apiRemoveFavMusic(token: String, gameType: Int, musicId: String): String? {
+            Log.i("CFQServer", "Removing game $gameType music $musicId to favorites.")
+            return try {
+                val response = fetchFromServer(
+                    method = "POST",
+                    "api/user/favorite/remove",
+                    token = token,
+                    payload = hashMapOf(
+                        "game" to gameType.toString(),
+                        "musicId" to musicId
+                    )
+                )
+                response.bodyAsText()
+            } catch (e: Exception) {
+                Log.e("CFQServer", "Failed to remove game $gameType music $musicId to favorites: ${e.localizedMessage}")
+                null
             }
         }
 
@@ -550,6 +594,48 @@ class CFQServer {
                 Log.e("CFQServer", "Failed to fetch $typeString leaderboard for ${gameName}\n$e")
                 emptyList()
             }
+        }
+
+        suspend fun apiFetchComment(gameType: Int, musicId: Int): List<Comment> {
+            return try {
+                val response = fetchFromServer(
+                    "POST",
+                    "api/comment/fetch",
+                    payload = hashMapOf(
+                        "musicId" to musicId,
+                        "musicFrom" to gameType
+                    )
+                )
+                decoder.decodeFromString<List<Comment>>(response.bodyAsText())
+            } catch (e: Exception) {
+                Log.e("CFQServer", "Failed to fetch comments for game $gameType music ${musicId}: ${e.localizedMessage}")
+                emptyList()
+            }
+        }
+        suspend fun apiPostComment(authToken: String, gameType: Int, musicId: Int, replyId: Int, content: String): Boolean {
+            val response = fetchFromServer(
+                "POST",
+                "api/comment/post",
+                payload = hashMapOf(
+                    "content" to content,
+                    "musicId" to musicId.toString(),
+                    "musicFrom" to gameType.toString(),
+                    "reply" to replyId.toString()
+                ),
+                token = authToken
+            )
+            return response.status.value == 200
+        }
+        suspend fun apiDeleteComment(authToken: String, commentId: Int): Boolean {
+            val response = fetchFromServer(
+                "POST",
+                "api/comment/delete",
+                payload = hashMapOf(
+                    "id" to commentId
+                ),
+                token = authToken
+            )
+            return response.status.value == 200
         }
 
 

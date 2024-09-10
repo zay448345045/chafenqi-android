@@ -1,6 +1,7 @@
 package com.nltv.chafenqi.view.songlist
 
 import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -9,16 +10,23 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -61,8 +69,11 @@ import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.nltv.chafenqi.SCREEN_PADDING
+import com.nltv.chafenqi.data.Comment
 import com.nltv.chafenqi.view.home.HomeNavItem
+import com.nltv.chafenqi.view.songlist.comment.CommentCard
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,15 +82,19 @@ fun SongDetailPage(
     index: Int,
     navController: NavController
 ) {
-    val model: SongDetailViewModel = viewModel<SongDetailViewModel>().also {
-        it.update(mode, index)
-    }
+    val model: SongDetailViewModel = viewModel()
     val uriHandler = LocalUriHandler.current
-    val context = LocalContext.current
+    val state by model.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     val snackbarHostState = remember {
         SnackbarHostState()
+    }
+
+    LaunchedEffect(Unit) {
+        scope.launch {
+            model.update(mode, index)
+        }
     }
 
     Scaffold(
@@ -112,7 +127,7 @@ fun SongDetailPage(
                 .padding(SCREEN_PADDING)
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -126,22 +141,42 @@ fun SongDetailPage(
                         .size(128.dp)
                         .clip(RoundedCornerShape(12.dp))
                 )
-                Column(
-                    horizontalAlignment = Alignment.Start
+                Column (
+                    modifier = Modifier.fillMaxHeight(),
+                    verticalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        text = model.title,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 26.sp,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = model.artist,
-                        fontSize = 18.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row (
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        IconButton(
+                            onClick = { model.toggleLoved(state.loved) },
+                            enabled = !state.syncing
+                        ) {
+                            Icon(
+                                imageVector = if (state.loved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = "Fav Button",
+                                tint = if (state.loved) Color.Red else Color.Gray
+                            )
+                        }
+                    }
+                    Column(
+                        horizontalAlignment = Alignment.Start
+                    ) {
+                        Text(
+                            text = model.title,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 26.sp,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = model.artist,
+                            fontSize = 18.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
             Row(
@@ -215,6 +250,36 @@ fun SongDetailPage(
                 model.chuDiffInfos.onEach {
                     ChunithmDifficultyCard(info = it, navController)
                 }
+            }
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "评论",
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                TextButton(
+                    onClick = {
+                        val game = if (mode == 0) "chunithm" else "maimai"
+                        navController.navigate(HomeNavItem.SongList.route + "/${game}/${index}/comment")
+                    }
+                ) {
+                    Text(text = "更多")
+                }
+            }
+            LazyRow (
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items (
+                    count = minOf(3, state.comments.size),
+                    key = { index -> state.comments[index].id },
+                    itemContent = { index ->
+                        CommentCard(comment = state.comments[index])
+                    }
+                )
             }
         }
     }

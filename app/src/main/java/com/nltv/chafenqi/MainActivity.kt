@@ -16,6 +16,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -33,6 +34,7 @@ import coil.memory.MemoryCache
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.ktx.analytics
 import com.google.firebase.ktx.Firebase
+import com.nltv.chafenqi.networking.CFQServer
 import com.nltv.chafenqi.ui.theme.ChafenqiTheme
 import com.nltv.chafenqi.view.home.HomeNavItem
 import com.nltv.chafenqi.view.home.HomePage
@@ -71,6 +73,7 @@ import com.nltv.chafenqi.view.settings.user.SettingsBindQQPage
 import com.nltv.chafenqi.view.settings.user.SettingsUserPage
 import com.nltv.chafenqi.view.songlist.SongDetailPage
 import com.nltv.chafenqi.view.songlist.SongListPage
+import com.nltv.chafenqi.view.songlist.comment.CommentPage
 import com.nltv.chafenqi.view.songlist.record.MusicRecordPage
 import com.nltv.chafenqi.view.songlist.stats.SongStatsPage
 import com.nltv.chafenqi.view.updater.UpdaterHelpPage
@@ -120,6 +123,10 @@ fun ChafenqiApp() {
         .build()
 
     Coil.setImageLoader(imageLoader)
+
+    LaunchedEffect(Unit) {
+        CFQServer.setDefaultServerPath(context.getString(R.string.serverAddress))
+    }
 
     ChafenqiTheme {
         Surface(
@@ -362,6 +369,13 @@ fun LogonPage(navController: NavHostController) {
                     navController = navController
                 )
             }
+            composable(HomeNavItem.SongList.route + "/maimai/{index}/comment") { navBackStackEntry ->
+                CommentPage(
+                    mode = 1,
+                    index = navBackStackEntry.arguments?.getString("index")?.toInt() ?: 0,
+                    navController = navController
+                )
+            }
             composable(HomeNavItem.SongList.route + "/chunithm/{index}") { navBackStackEntry ->
                 SongDetailPage(
                     mode = 0,
@@ -382,6 +396,13 @@ fun LogonPage(navController: NavHostController) {
                     mode = 0,
                     index = navBackStackEntry.arguments?.getString("index")?.toInt() ?: 0,
                     difficulty = navBackStackEntry.arguments?.getString("levelIndex")?.toInt() ?: 0,
+                    navController = navController
+                )
+            }
+            composable(HomeNavItem.SongList.route + "/chunithm/{index}/comment") { navBackStackEntry ->
+                CommentPage(
+                    mode = 0,
+                    index = navBackStackEntry.arguments?.getString("index")?.toInt() ?: 0,
                     navController = navController
                 )
             }

@@ -20,6 +20,7 @@ import com.nltv.chafenqi.BuildConfig
 import com.nltv.chafenqi.R
 import com.nltv.chafenqi.cacheStore
 import com.nltv.chafenqi.networking.CFQServer
+import com.nltv.chafenqi.storage.persistent.CFQPersistentData
 import com.nltv.chafenqi.storage.user.CFQUser
 import com.nltv.chafenqi.tile.UpdaterTileService
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,9 +28,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.format
+import kotlinx.datetime.format.FormatStringsInDatetimeFormats
+import kotlinx.datetime.format.byUnicodePattern
+import kotlinx.datetime.toLocalDateTime
 import java.util.concurrent.Executor
 
 data class SettingsUiState(
@@ -70,7 +76,10 @@ class SettingsPageViewModel : ViewModel() {
     val user = CFQUser
     val username = user.username
     val token = user.token
-    val bindQQ = user.bindQQ
+    val bindQQ = user.remoteOptions.bindQQ
+
+    var maiSongListVersionString by mutableStateOf("")
+    var chuSongListVersionString by mutableStateOf("")
 
     suspend fun isAppVersionLatest(): Boolean {
         val versionData = CFQServer.apiFetchLatestVersion()
@@ -83,6 +92,22 @@ class SettingsPageViewModel : ViewModel() {
         return versionData.isLatest(versionCode, buildNumber)
     }
 
+    @OptIn(FormatStringsInDatetimeFormats::class)
+    fun updateSongListVersion() {
+        viewModelScope.launch {
+            maiSongListVersionString = kotlinx.datetime.Instant.fromEpochSeconds(CFQPersistentData.Maimai.version.toLong())
+                .toLocalDateTime(TimeZone.currentSystemDefault())
+                .format(LocalDateTime.Format {
+                    byUnicodePattern("yyyy-MM-dd")
+                })
+            chuSongListVersionString = kotlinx.datetime.Instant.fromEpochSeconds(CFQPersistentData.Chunithm.version.toLong())
+                .toLocalDateTime(TimeZone.currentSystemDefault())
+                .format(LocalDateTime.Format {
+                    byUnicodePattern("yyyy-MM-dd")
+                })
+        }
+    }
+
     fun updateSponsorList() {
         viewModelScope.launch {
             _uiState.update { currentValue ->
@@ -93,17 +118,17 @@ class SettingsPageViewModel : ViewModel() {
         }
     }
 
+    @OptIn(FormatStringsInDatetimeFormats::class)
     fun updateUserPremiumTime() {
         viewModelScope.launch {
             val time = CFQServer.apiCheckPremiumTime(username)
-            val nowInstant = Instant.now()
-            val premiumInstant = Instant.ofEpochMilli(time.toLong() * 1000)
+            val nowInstant = Clock.System.now()
+            val premiumInstant = Instant.fromEpochSeconds(time.toLong())
             val dateString = premiumInstant
-                .atZone(ZoneId.systemDefault())
-                .toLocalDateTime()
-                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                .toLocalDateTime(TimeZone.currentSystemDefault())
+                .format(LocalDateTime.Format { byUnicodePattern("yyyy-MM-dd") })
 
-            val statusString = if (premiumInstant.isAfter(nowInstant)) {
+            val statusString = if (premiumInstant > nowInstant) {
                 "有效期至$dateString"
             } else {
                 "已于${dateString}过期"
