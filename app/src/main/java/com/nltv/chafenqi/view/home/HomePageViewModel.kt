@@ -1,5 +1,6 @@
 package com.nltv.chafenqi.view.home
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.getValue
@@ -42,6 +43,7 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.format
+import kotlinx.datetime.format.Padding
 import kotlinx.datetime.format.byUnicodePattern
 import kotlinx.datetime.format.char
 import kotlinx.datetime.toLocalDateTime
@@ -89,6 +91,7 @@ data class HomePageUiState(
     val maiLeaderboardRank: MutableList<LeaderboardRank?> = mutableListOf(null, null, null, null),
     val chuLeaderboardRank: MutableList<LeaderboardRank?> = mutableListOf(null, null, null, null),
 
+    val isLogEmpty: Boolean = true,
     val logLastPlayedTime: String = "",
     val logLastPlayedCount: String = "",
     val logLastPlayedDuration: String = "",
@@ -407,10 +410,19 @@ class HomePageViewModel : ViewModel() {
         }
     }
 
+    @SuppressLint("DefaultLocale")
     fun updateLog() {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isLogEmpty = true
+                )
+            }
+        }
         when (user.mode) {
             0 -> {
                 if (user.chunithm.log == null) return
+                if (user.chunithm.log!!.records.isEmpty()) return
                 viewModelScope.launch {
                     _uiState.update {
                         it.copy(
@@ -425,22 +437,16 @@ class HomePageViewModel : ViewModel() {
                             }) ?: "",
                             logLastPlayedCount = user.chunithm.log?.records?.first()?.recentEntries?.size?.toString()
                                 ?: "",
-                            logLastPlayedDuration = user.chunithm.log?.records?.first()?.duration?.toLocalDateTime(
-                                TimeZone.currentSystemDefault()
-                            )?.format(LocalDateTime.Format {
-                                hour()
-                                char('h')
-                                char(' ')
-                                minute()
-                                char('m')
-                            }) ?: "",
-                            logLastPlayedAverageScore = String.format(Locale.getDefault(), "%.0f", user.chunithm.log?.records?.first()?.averageScore ?: 0)
+                            logLastPlayedDuration = user.chunithm.log?.records?.first()?.durationString ?: "",
+                            logLastPlayedAverageScore = String.format(Locale.getDefault(), "%.0f", user.chunithm.log?.records?.first()?.averageScore ?: 0),
+                            isLogEmpty = false
                         )
                     }
                 }
             }
             1 -> {
                 if (user.maimai.log == null) return
+                if (user.maimai.log!!.records.isEmpty()) return
                 viewModelScope.launch {
                     _uiState.update {
                         it.copy(
@@ -455,20 +461,13 @@ class HomePageViewModel : ViewModel() {
                             }) ?: "",
                             logLastPlayedCount = user.maimai.log?.records?.first()?.recentEntries?.size?.toString()
                                 ?: "",
-                            logLastPlayedDuration = user.maimai.log?.records?.first()?.duration?.toLocalDateTime(
-                                TimeZone.currentSystemDefault()
-                            )?.format(LocalDateTime.Format {
-                                hour()
-                                char('h')
-                                char(' ')
-                                minute()
-                                char('m')
-                            }) ?: "",
+                            logLastPlayedDuration = user.maimai.log?.records?.first()?.durationString ?: "",
                             logLastPlayedAverageScore = String.format(
                                 Locale.getDefault(),
                                 "%.4f",
                                 user.maimai.log?.records?.first()?.averageScore ?: 0
-                            ) + "%"
+                            ) + "%",
+                            isLogEmpty = false
                         )
                     }
                 }
