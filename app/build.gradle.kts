@@ -9,7 +9,8 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
  /*   */
- /*id("com.google.gms.google-services")
+ /*
+id("com.google.gms.google-services")
 
     id("com.google.firebase.crashlytics")
     id("com.google.firebase.firebase-perf")
