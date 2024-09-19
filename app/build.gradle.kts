@@ -9,11 +9,11 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
  /*   */
-id("com.google.gms.google-services")
+ /*id("com.google.gms.google-services")
 
     id("com.google.firebase.crashlytics")
     id("com.google.firebase.firebase-perf")
-
+ */
 }
 
 kotlin {
@@ -182,11 +182,11 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("com.onesignal:OneSignal:5.1.15")
 
-    implementation(platform("com.google.firebase:firebase-bom:33.3.0"))
+ /*    implementation(platform("com.google.firebase:firebase-bom:33.3.0"))
     implementation("com.google.firebase:firebase-crashlytics-ktx")
     implementation("com.google.firebase:firebase-perf-ktx")
     implementation("com.google.firebase:firebase-analytics-ktx")
-
+*/
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
     implementation("androidx.compose.material:material:1.7.1")
