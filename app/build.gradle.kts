@@ -7,7 +7,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("kotlinx-serialization")
     id("org.jetbrains.kotlin.plugin.compose")
-/*    id("com.google.devtools.ksp")  */
+    id("com.google.devtools.ksp")  
  /*   */
  /*
 id("com.google.gms.google-services")
